@@ -39,6 +39,555 @@
   </style>
 </head>
 <body>
-<!-- Place lesson content here or copy from canvas manually -->
+
+<h1>AWS Lambda Microlearning Series – Public Holiday Tracker</h1>
+<p>This tutorial teaches you to build a serverless backend project in 10-minute steps using AWS Lambda, API Gateway, DynamoDB, SES, EventBridge, S3, and CloudWatch — all designed for absolute beginners.</p>
+
+<section id="lesson1">
+  <h2>Lesson 1: Hello Lambda – Run Your First Function</h2>
+  <p><strong>Objective:</strong> Create and run your first AWS Lambda function using the AWS Console.</p>
+  <ol>
+    <li>Go to the <a href="https://console.aws.amazon.com/lambda/" target="_blank">AWS Lambda Console</a>.</li>
+    <li>Click <strong>Create function</strong>.</li>
+    <li>Choose <strong>Author from scratch</strong>.</li>
+    <li>Fill in the function details:
+      <ul>
+        <li><strong>Function name:</strong> <code>HelloHolidayLambda</code></li>
+        <li><strong>Runtime:</strong> <code>Node.js 18.x</code></li>
+        <li><strong>Permissions:</strong> Leave default: Create new role with basic Lambda permissions</li>
+      </ul>
+    </li>
+    <li>Click <strong>Create function</strong>.</li>
+    <li>Scroll down to <strong>Code source</strong>. Replace code with:
+<pre><code>exports.handler = async (event) => {
+  return {
+    statusCode: 200,
+    body: JSON.stringify({ message: "Hello from Lambda!" }),
+  };
+};</code></pre>
+    </li>
+    <li>Click <strong>Deploy</strong>.</li>
+    <li>Click <strong>Test</strong> tab, set Event name: <code>TestHello</code>, leave event JSON empty, and click <strong>Save</strong>.</li>
+    <li>Click <strong>Test</strong> again to run the function.</li>
+  </ol>
+  <p><strong>✅ Verification Test:</strong></p>
+  <pre><code>{
+  "statusCode": 200,
+  "body": "{\"message\":\"Hello from Lambda!\"}"
+}</code></pre>
+  <p class="progress">✅ Lambda created and executed successfully.</p>
+</section>
+
+<section id="lesson2">
+  <h2>Lesson 2: Add Logic to Parse Input</h2>
+  <p><strong>Objective:</strong> Modify your Lambda function to accept and process a JSON input containing <code>countryCode</code> and <code>year</code>.</p>
+  <ol>
+    <li>Open <code>HelloHolidayLambda</code> in the AWS Lambda Console.</li>
+    <li>Scroll to <strong>Code source</strong> and replace with:
+<pre><code>exports.handler = async (event) => {
+  const body = JSON.parse(event.body || "{}");
+  const { countryCode, year } = body;
+
+  return {
+    statusCode: 200,
+    body: JSON.stringify({
+      message: `Tracking holidays for ${countryCode} in ${year}`
+    }),
+  };
+};</code></pre>
+    </li>
+    <li>Click <strong>Deploy</strong>.</li>
+    <li>Click <strong>Test</strong> → Configure event → name it <code>ParseInputTest</code>.</li>
+    <li>Use this JSON:
+<pre><code>{
+  "body": "{\"countryCode\": \"US\", \"year\": 2025}"
+}</code></pre>
+    </li>
+    <li>Click <strong>Save</strong>, then <strong>Test</strong>.</li>
+  </ol>
+  <p><strong>✅ Verification Test:</strong></p>
+  <pre><code>{
+  "statusCode": 200,
+  "body": "{\"message\":\"Tracking holidays for US in 2025\"}"
+}</code></pre>
+  <p class="progress">✅ Lambda now parses JSON input and returns dynamic content.</p>
+</section>
+
+<section id="lesson3">
+  <h2>Lesson 3: Return Clean JSON Response</h2>
+  <p><strong>Objective:</strong> Improve the response format with headers and structured output.</p>
+  <ol>
+    <li>Update your Lambda code:
+<pre><code>exports.handler = async (event) => {
+  const body = JSON.parse(event.body || "{}");
+  const { countryCode, year } = body;
+
+  return {
+    statusCode: 200,
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      success: true,
+      countryCode,
+      year,
+      message: `Tracking holidays for ${countryCode} in ${year}`
+    }),
+  };
+};</code></pre>
+    </li>
+    <li>Click <strong>Deploy</strong> and use the same test event as Lesson 2.</li>
+  </ol>
+  <p><strong>✅ Verification Test:</strong></p>
+  <pre><code>{
+  "statusCode": 200,
+  "headers": { "Content-Type": "application/json" },
+  "body": "{\"success\":true,\"countryCode\":\"US\",\"year\":2025,\"message\":\"Tracking holidays for US in 2025\"}"
+}</code></pre>
+  <p class="progress">✅ Lambda returns structured, API-ready JSON.</p>
+</section>
+
+<section id="lesson4">
+  <h2>Lesson 4: Connect API Gateway to Lambda</h2>
+  <p><strong>Objective:</strong> Allow users to trigger your Lambda function using an HTTP POST request.</p>
+  <ol>
+    <li>Open the <a href="https://console.aws.amazon.com/apigateway/" target="_blank">API Gateway Console</a>.</li>
+    <li>Click <strong>Create API</strong> → Choose <strong>HTTP API</strong> → Click <strong>Build</strong>.</li>
+    <li>Under <strong>Integrations</strong>, choose:
+      <ul>
+        <li><strong>Integration type:</strong> Lambda function</li>
+        <li><strong>Function:</strong> <code>HelloHolidayLambda</code></li>
+      </ul>
+    </li>
+    <li>Click <strong>Next</strong>, then add a route:
+      <ul>
+        <li><strong>Method:</strong> POST</li>
+        <li><strong>Resource path:</strong> <code>/track</code></li>
+      </ul>
+    </li>
+    <li>Create and attach a new stage (name it <code>dev</code>), then click <strong>Next</strong> → <strong>Create</strong>.</li>
+    <li>Copy the new API URL listed under <strong>Invoke URL</strong>.</li>
+    <li>Use Postman or curl to send:
+<pre><code>curl -X POST https://your-api-id.execute-api.region.amazonaws.com/track \
+  -H "Content-Type: application/json" \
+  -d '{"countryCode": "IN", "year": 2025}'</code></pre>
+    </li>
+  </ol>
+  <p><strong>✅ Verification Test:</strong></p>
+  <pre><code>{
+  "success": true,
+  "countryCode": "IN",
+  "year": 2025,
+  "message": "Tracking holidays for IN in 2025"
+}</code></pre>
+  <p class="progress">✅ Lambda is now HTTP-triggered via API Gateway.</p>
+</section>
+
+<section id="lesson5">
+  <h2>Lesson 5: Add Input Validation</h2>
+  <p><strong>Objective:</strong> Ensure users provide <code>countryCode</code> and <code>year</code>.</p>
+  <ol>
+    <li>Update Lambda code to validate input:
+<pre><code>exports.handler = async (event) => {
+  const body = JSON.parse(event.body || "{}");
+  const { countryCode, year } = body;
+
+  if (!countryCode || !year) {
+    return {
+      statusCode: 400,
+      body: JSON.stringify({ success: false, message: "countryCode and year are required." }),
+    };
+  }
+
+  return {
+    statusCode: 200,
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      success: true,
+      message: `Tracking holidays for ${countryCode} in ${year}`,
+    }),
+  };
+};</code></pre>
+    </li>
+    <li>Click <strong>Deploy</strong> and test with missing values.</li>
+  </ol>
+  <p><strong>✅ Verification Test:</strong></p>
+  <pre><code>{
+  "success": false,
+  "message": "countryCode and year are required."
+}</code></pre>
+  <p class="progress">✅ Your function now validates required inputs.</p>
+</section>
+
+<section id="lesson6">
+  <h2>Lesson 6: Setup CloudWatch Logs & DLQ</h2>
+  <p><strong>Objective:</strong> Enable logs and configure a Dead Letter Queue for failed events.</p>
+  <ol>
+    <li>Open the Lambda → <strong>Monitor</strong> tab → <strong>View logs in CloudWatch</strong>.</li>
+    <li>Confirm logs are showing per test run.</li>
+    <li>To configure DLQ:
+      <ul>
+        <li>Go to <strong>Configuration → Asynchronous invocation</strong></li>
+        <li>Click <strong>Edit</strong> and select <strong>SQS</strong></li>
+        <li>Create a new queue named <code>HolidayDLQ</code> and save</li>
+      </ul>
+    </li>
+    <li>Force an error by inserting:
+<pre><code>throw new Error("Simulated error")</code></pre>
+    </li>
+    <li>Invoke the function, then check <strong>SQS → HolidayDLQ</strong> for messages.</li>
+  </ol>
+  <p class="progress">✅ CloudWatch and DLQ are now capturing function errors.</p>
+</section>
+
+<section id="lesson7">
+  <h2>Lesson 7: Call Public Holiday API</h2>
+  <p><strong>Objective:</strong> Fetch holidays from Nager.Date public API.</p>
+  <ol>
+    <li>Update Lambda code to include:
+<pre><code>const https = require("https");
+
+function fetchHolidays(countryCode, year) {
+  return new Promise((resolve, reject) => {
+    const url = `https://date.nager.at/api/v3/PublicHolidays/${year}/${countryCode}`;
+    https.get(url, (res) => {
+      let data = "";
+      res.on("data", (chunk) => data += chunk);
+      res.on("end", () => resolve(JSON.parse(data)));
+    }).on("error", reject);
+  });
+}</code></pre>
+    </li>
+    <li>Use this function inside your handler and return the results as JSON.</li>
+    <li>Deploy and test with valid country/year.</li>
+  </ol>
+  <p class="progress">✅ Lambda can now call external APIs.</p>
+</section>
+
+<section id="lesson8">
+  <h2>Lesson 8: Store Holidays in DynamoDB</h2>
+  <p><strong>Objective:</strong> Save holiday data into a DynamoDB table.</p>
+  <ol>
+    <li>Go to <a href="https://console.aws.amazon.com/dynamodb/" target="_blank">DynamoDB Console</a> → Create table:
+      <ul>
+        <li>Table name: <code>HolidayEvents</code></li>
+        <li>Partition key: <code>countryCode</code> (String)</li>
+        <li>Sort key: <code>date</code> (String)</li>
+      </ul>
+    </li>
+    <li>Attach the <strong>AmazonDynamoDBFullAccess</strong> policy to your Lambda role (for now).</li>
+    <li>Use <code>AWS.DynamoDB.DocumentClient</code> to insert items in Lambda.</li>
+  </ol>
+  <p class="progress">✅ Lambda now persists holiday data into DynamoDB.</p>
+</section>
+
+<section id="lesson9">
+  <h2>Lesson 9: Avoid Duplicate Entries</h2>
+  <p><strong>Objective:</strong> Add logic to avoid inserting the same holiday twice.</p>
+  <ol>
+    <li>Before <code>put()</code>, check with <code>get()</code> to see if it already exists.</li>
+    <li>If it does not exist, proceed with inserting.</li>
+  </ol>
+  <p class="progress">✅ Duplicate writes are now prevented using idempotency.</p>
+</section>
+
+<section id="lesson10">
+  <h2>Lesson 10: Retrieve Holidays via API</h2>
+  <p><strong>Objective:</strong> Add a GET API to fetch holidays by country code.</p>
+  <ol>
+    <li>In API Gateway, add route: <code>GET /holidays/{country}</code></li>
+    <li>In Lambda, extract <code>event.pathParameters.country</code> and query DynamoDB.</li>
+    <li>Return the result array as JSON.</li>
+    <li>Test using curl or Postman.</li>
+  </ol>
+  <p><strong>✅ Verification Test:</strong> Response shows saved holidays for that country.</p>
+  <p class="progress">✅ Users can now retrieve holiday data via GET.</p>
+</section>
+
+<section id="lesson11">
+  <h2>Lesson 11: Add EventBridge Scheduled Trigger</h2>
+  <p><strong>Objective:</strong> Use Amazon EventBridge to run your Lambda function daily.</p>
+  <ol>
+    <li>Go to the <a href="https://console.aws.amazon.com/events/" target="_blank">EventBridge Console</a>.</li>
+    <li>Create a rule named <code>DailyHolidayReminder</code>.</li>
+    <li>Choose schedule type: fixed rate (1 day) or cron: <code>cron(0 8 * * ? *)</code>.</li>
+    <li>Set the target to your <code>HelloHolidayLambda</code> function.</li>
+    <li>Optionally use test input like <code>{"countryCode": "US", "year": 2025}</code>.</li>
+  </ol>
+  <p class="progress">✅ Lambda now runs daily using EventBridge schedule.</p>
+</section>
+
+<section id="lesson12">
+  <h2>Lesson 12: Find Holidays Happening Tomorrow</h2>
+  <p><strong>Objective:</strong> Add logic to detect holidays scheduled for tomorrow.</p>
+  <ol>
+    <li>In Lambda, calculate tomorrow’s date:
+<pre><code>const tomorrow = new Date();
+tomorrow.setDate(tomorrow.getDate() + 1);
+const tomorrowISO = tomorrow.toISOString().split("T")[0];</code></pre></li>
+    <li>Query DynamoDB for holidays and filter for those matching <code>tomorrowISO</code>.</li>
+  </ol>
+  <p class="progress">✅ Lambda can now detect upcoming holidays by date.</p>
+</section>
+
+<section id="lesson13">
+  <h2>Lesson 13: Send Email via Amazon SES</h2>
+  <p><strong>Objective:</strong> Notify users of tomorrow’s holidays via email using Amazon SES.</p>
+  <ol>
+    <li>Go to the <a href="https://console.aws.amazon.com/ses/" target="_blank">SES Console</a> and verify your sender email.</li>
+    <li>Add this to Lambda:
+<pre><code>const AWS = require("aws-sdk");
+const ses = new AWS.SES();
+
+await ses.sendEmail({
+  Destination: { ToAddresses: ["recipient@example.com"] },
+  Message: {
+    Subject: { Data: "Upcoming Holiday Reminder" },
+    Body: {
+      Text: { Data: `Tomorrow is ${holiday.name} (${holiday.date})` }
+    }
+  },
+  Source: "your-verified-email@example.com"
+}).promise();</code></pre></li>
+    <li>Ensure your Lambda role includes SES send permissions.</li>
+  </ol>
+  <p class="progress">✅ Email reminders now working via SES.</p>
+</section>
+
+<section id="lesson14">
+  <h2>Lesson 14: Format Holiday Email with Template</h2>
+  <p><strong>Objective:</strong> Format email content to include multiple holidays in a readable message.</p>
+  <ol>
+    <li>Create a string with a list of holidays:
+<pre><code>let message = "Holidays happening tomorrow:
+
+";
+upcoming.forEach(h => {
+  message += `• ${h.name} (${h.date})
+`;
+});</code></pre></li>
+    <li>Send this as the email body.</li>
+    <li>Optional: use HTML formatting in <code>Body.Html</code>.</li>
+  </ol>
+  <p class="progress">✅ Emails now support multiple holidays in clean format.</p>
+</section>
+
+<section id="lesson15">
+  <h2>Lesson 15: Add User Email Preferences</h2>
+  <p><strong>Objective:</strong> Store and manage user preferences for country, year, and email address.</p>
+  <ol>
+    <li>Create a new DynamoDB table:
+      <ul>
+        <li><strong>Table name:</strong> <code>UserPreferences</code></li>
+        <li><strong>Partition key:</strong> <code>userId</code> (String)</li>
+      </ul>
+    </li>
+    <li>Create a new route: <code>POST /subscribe</code></li>
+    <li>Lambda should accept input and store:
+<pre><code>await dynamo.put({
+  TableName: "UserPreferences",
+  Item: {
+    userId: prefs.userId,
+    email: prefs.email,
+    countryCode: prefs.countryCode,
+    year: prefs.year
+  }
+}).promise();</code></pre></li>
+    <li>Update the scheduled Lambda to loop through all users in <code>UserPreferences</code> and send emails.</li>
+  </ol>
+  <p class="progress">✅ Preferences stored; users now receive tailored notifications.</p>
+</section>
+
+<section id="lesson15.5">
+  <h2>Lesson 15.5: Micro-Milestone – System Integration Check</h2>
+  <p><strong>Objective:</strong> Confirm end-to-end system functionality across all components.</p>
+  <ul>
+    <li>POST to <code>/subscribe</code> to register user preferences.</li>
+    <li>POST to <code>/track</code> to fetch and store holidays.</li>
+    <li>Trigger scheduled Lambda via EventBridge (or manually).</li>
+    <li>Confirm:</li>
+    <ul>
+      <li>Holiday is stored in DynamoDB</li>
+      <li>Tomorrow’s holiday is detected</li>
+      <li>Email is sent to the user</li>
+      <li>Logs are in CloudWatch, metrics visible, no errors in DLQ</li>
+    </ul>
+  </ul>
+  <pre><code>Flow:
+User → /subscribe → UserPreferences
+User → /track → fetchHolidays → HolidayEvents
+EventBridge (daily) → Lambda → filter for tomorrow → SES
+                                  ↓
+                      logs + metrics + DLQ (if errors)</code></pre>
+  <p class="progress">🎯 All components integrated and operational.</p>
+</section>
+
+<section id="lesson16">
+  <h2>Lesson 16: Create Custom CloudWatch Metrics</h2>
+  <p><strong>Objective:</strong> Emit a custom CloudWatch metric whenever an email reminder is sent.</p>
+  <ol>
+    <li>In your Lambda function, after sending an SES email, add:
+<pre><code>const cloudwatch = new AWS.CloudWatch();
+await cloudwatch.putMetricData({
+  Namespace: "HolidayTracker",
+  MetricData: [{
+    MetricName: "RemindersSent",
+    Unit: "Count",
+    Value: 1
+  }]
+}).promise();</code></pre></li>
+    <li>Click <strong>Deploy</strong>.</li>
+    <li>Invoke the Lambda and visit <a href="https://console.aws.amazon.com/cloudwatch/" target="_blank">CloudWatch Console</a> → Metrics → HolidayTracker namespace.</li>
+  </ol>
+  <p class="progress">✅ Custom metrics now track email activity.</p>
+</section>
+
+<section id="lesson17">
+  <h2>Lesson 17: Setup CloudWatch Alarms</h2>
+  <p><strong>Objective:</strong> Get notified if no reminders are sent for a day.</p>
+  <ol>
+    <li>In CloudWatch → Alarms → <strong>Create Alarm</strong>.</li>
+    <li>Select the <code>RemindersSent</code> metric under <code>HolidayTracker</code>.</li>
+    <li>Set condition: <strong>Lower than 1</strong> for 1 data point within 1 day.</li>
+    <li>Configure email or SNS notifications and create the alarm.</li>
+  </ol>
+  <p class="progress">✅ Alarms now alert you on missing reminder activity.</p>
+</section>
+
+<section id="lesson18">
+  <h2>Lesson 18: Retry from DLQ</h2>
+  <p><strong>Objective:</strong> Reprocess failed Lambda events manually from the DLQ.</p>
+  <ol>
+    <li>Go to <a href="https://console.aws.amazon.com/sqs/" target="_blank">SQS Console</a> → Select <code>HolidayDLQ</code>.</li>
+    <li>Click <strong>Send and receive messages</strong>, select a message, and copy its contents.</li>
+    <li>Return to Lambda → <strong>Test</strong> → Create test event → paste DLQ message JSON.</li>
+    <li>Invoke the function to reprocess.</li>
+  </ol>
+  <p class="progress">✅ You can now recover from failures using DLQ.</p>
+</section>
+
+<section id="lesson19">
+  <h2>Lesson 19: Enable Structured Logging</h2>
+  <p><strong>Objective:</strong> Output structured JSON logs for easier search and analysis.</p>
+  <ol>
+    <li>Use this logging format inside your Lambda handler:
+<pre><code>console.log(JSON.stringify({
+  level: "info",
+  action: "sendReminder",
+  user: userId,
+  timestamp: new Date().toISOString()
+}));</code></pre></li>
+    <li>Click <strong>Deploy</strong>.</li>
+    <li>View logs in CloudWatch → Log Groups → your Lambda function → latest log stream.</li>
+  </ol>
+  <p class="progress">✅ Logs now use structured format for filtering and diagnostics.</p>
+</section>
+
+<section id="lesson20">
+  <h2>Lesson 20: Debug a Failed Run</h2>
+  <p><strong>Objective:</strong> Simulate and debug a failure using CloudWatch and DLQ.</p>
+  <ol>
+    <li>Temporarily break the SES logic in your function (e.g. bad email address).</li>
+    <li>Click <strong>Deploy</strong> and invoke the function.</li>
+    <li>Go to CloudWatch Logs and look for errors.</li>
+    <li>Go to SQS → <code>HolidayDLQ</code> → verify the failed message is present.</li>
+    <li>Fix the bug, then retry the event manually as in Lesson 18.</li>
+  </ol>
+  <p class="progress">✅ You’ve verified the end-to-end error handling path.</p>
+</section>
+
+<section id="lesson21">
+  <h2>Lesson 21: Add API to Delete Holidays</h2>
+  <p><strong>Objective:</strong> Let users delete a specific holiday entry from DynamoDB using a DELETE API route.</p>
+  <ol>
+    <li>In API Gateway, create a new route:
+      <ul>
+        <li><strong>Method:</strong> DELETE</li>
+        <li><strong>Path:</strong> <code>/holidays/{country}/{date}</code></li>
+      </ul>
+    </li>
+    <li>In Lambda, extract path parameters and delete from DynamoDB:
+<pre><code>const {{ country, date }} = event.pathParameters;
+
+await dynamo.delete({
+  TableName: "HolidayEvents",
+  Key: {
+    countryCode: country,
+    date: date
+  }
+}).promise();</code></pre></li>
+    <li>Return a 200 status response with a success message.</li>
+  </ol>
+  <p class="progress">✅ Users can now clean up holiday data via API.</p>
+</section>
+
+<section id="lesson22">
+  <h2>Lesson 22: Export Holiday Data to S3</h2>
+  <p><strong>Objective:</strong> Allow users to export stored holidays to an S3 bucket as a JSON file.</p>
+  <ol>
+    <li>Create an S3 bucket (e.g., <code>holiday-exports-demo</code>).</li>
+    <li>Add this code to Lambda:
+<pre><code>const s3 = new AWS.S3();
+await s3.putObject({
+  Bucket: "holiday-exports-demo",
+  Key: `holidays-${countryCode}-${year}.json`,
+  Body: JSON.stringify(holidays),
+  ContentType: "application/json"
+}).promise();</code></pre></li>
+    <li>Ensure Lambda has permissions: <code>s3:PutObject</code> for your bucket.</li>
+  </ol>
+  <p class="progress">✅ Data can now be archived/exported to S3.</p>
+</section>
+
+<section id="lesson23">
+  <h2>Lesson 23: Add Basic Rate Limiting with IAM and API Keys</h2>
+  <p><strong>Objective:</strong> Add usage restrictions to your API Gateway endpoints.</p>
+  <ol>
+    <li>Go to API Gateway → <strong>Usage Plans</strong> → <strong>Create</strong> a plan.</li>
+    <li>Set throttling (e.g., 5 requests/sec) and quotas (e.g., 1000 req/month).</li>
+    <li>Create an API key and attach it to the plan.</li>
+    <li>Enable <strong>API key required</strong> on selected routes.</li>
+    <li>Pass the key using Postman or curl with the <code>x-api-key</code> header.</li>
+  </ol>
+  <p class="progress">✅ Rate limits are now enforced on your API endpoints.</p>
+</section>
+
+<section id="lesson24">
+  <h2>Lesson 24: Final Integration Test – End-to-End Flow</h2>
+  <p><strong>Objective:</strong> Validate the entire pipeline: subscribe, track, store, schedule, email, monitor.</p>
+  <ol>
+    <li>Subscribe user:
+<pre><code>{
+  "userId": "alice",
+  "email": "alice@example.com",
+  "countryCode": "US",
+  "year": 2025
+}</code></pre></li>
+    <li>Call <code>POST /track</code> to store holidays.</li>
+    <li>Trigger the scheduled function manually or wait for EventBridge.</li>
+    <li>Confirm:
+      <ul>
+        <li>DynamoDB stores data</li>
+        <li>Logs + metrics appear</li>
+        <li>Email is received</li>
+      </ul>
+    </li>
+  </ol>
+  <p class="progress">🎯 Full system integration works correctly.</p>
+</section>
+
+<section id="lesson25">
+  <h2>Lesson 25: Package and Reuse Your System</h2>
+  <p><strong>Objective:</strong> Deploy your system via template using AWS SAM or CloudFormation.</p>
+  <ol>
+    <li>Install AWS SAM CLI.</li>
+    <li>Create <code>template.yaml</code> with resources: Lambda, API Gateway, DynamoDB, IAM, S3.</li>
+    <li>Run:
+<pre><code>sam build
+sam deploy --guided</code></pre></li>
+    <li>Push code to GitHub or CodeCommit for reuse.</li>
+  </ol>
+  <p class="progress">✅ Your project is now portable, reusable, and production-ready.</p>
+</section>
+
 </body>
 </html>
+
